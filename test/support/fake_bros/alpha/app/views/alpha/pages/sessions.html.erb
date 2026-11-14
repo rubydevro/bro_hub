@@ -1,0 +1,40 @@
+<% bro_hub_crumb "Console sessions" %>
+<% content_for :bro_hub_crumb_actions do %>
+  <%= bro_hub_crumb_link "Pending", "#", active: true %>
+  <%= bro_hub_crumb_link "Appropriate", "#" %>
+  <%= bro_hub_crumb_link "Flagged", "#" %>
+  <%= bro_hub_crumb_link "All", "#" %>
+<% end %>
+<%= bro_hub_hero eyebrow: "Console sessions · production", title: "3", subtitle: "awaiting a verdict",
+      lead: "Who used a production console, why, and what they did. Review each one: approve it or flag it.",
+      stats: [ [ 4, "unlocks", :amber ], [ 6, "flagged commands", :red ] ] %>
+<form class="bh-filters">
+  <input class="bh-input is-strong" placeholder="Filter by user">
+  <label class="bh-field">From<input type="date" class="bh-input"></label>
+  <label class="bh-field">To<input type="date" class="bh-input"></label>
+  <a href="#" class="bh-chip is-on">Needs attention only</a>
+  <a href="#" class="bh-link-quiet">Reset</a>
+</form>
+<div class="bh-table-wrap">
+  <div class="bh-table" style="--cols: 150px 80px minmax(220px,1fr) 80px 64px 200px 110px; --min: 880px">
+    <div class="bh-row is-head"><span>Started</span><span>User</span><span>Reason</span><span>Source</span><span>Length</span><span>Flags</span><span>Review</span></div>
+    <% [ [ "2026-11-14 12:09", "you", "just chilling", 1, 5, "Pending", "bh-tone-muted" ],
+         [ "2026-11-14 08:47", "jane", "Fixing invoice 12, ticket #4521", 1, 1, "Pending", "bh-tone-muted" ],
+         [ "2026-11-12 16:20", "jane", "Backfilling plan names", 0, 0, "Appropriate", "bh-tone-green" ],
+         [ "2026-11-11 09:02", "omar", "Looking around", 2, 4, "Flagged", "bh-tone-red" ] ].each do |started, user, reason, unlocks, flagged, review, tone| %>
+      <a href="/hub/alpha/sessions/5" class="bh-row <%= flagged > 0 ? "bh-edge-red" : unlocks > 0 ? "bh-edge-amber" : "" %>">
+        <span class="bh-tone-violet"><%= started %></span>
+        <span class="bh-cell-strong"><%= user %></span>
+        <span class="bh-cell-text"><%= reason %></span>
+        <span class="bh-cell-muted">console</span>
+        <span>12m</span>
+        <span class="bh-tags">
+          <% if unlocks > 0 %><span class="bh-tag is-amber"><%= unlocks %> unlock<%= "s" if unlocks > 1 %></span><% end %>
+          <% if flagged > 0 %><span class="bh-tag is-red"><%= flagged %> flagged</span><% end %>
+        </span>
+        <span class="bh-status <%= tone %>"><%= review %></span>
+      </a>
+    <% end %>
+    <div class="bh-hint" style="margin-top:14px">4 sessions</div>
+  </div>
+</div>

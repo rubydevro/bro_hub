@@ -1,0 +1,15 @@
+<h1>BroHub dummy app</h1>
+<p>Pretend to be a user, then open <%= link_to "/hub", "/hub" %> (Alpha + Beta inside the hub) or <%= link_to "/solo", "/solo" %> (Gamma mounted on its own).</p>
+<p>Signed in as: <strong><%= current_user&.email || "nobody" %></strong></p>
+
+<%= form_with url: role_path, method: :post do %>
+  <% (User::ROLES + [ nil ]).each do |role| %>
+    <button type="submit" name="role" value="<%= role %>"><%= role || "sign out" %></button>
+  <% end %>
+  <input type="hidden" name="return_to" value="/hub">
+<% end %>
+
+<ul>
+  <li><strong>staff</strong>: sees Beta only</li>
+  <li><strong>auditor</strong>: sees Alpha and Beta</li>
+</ul>

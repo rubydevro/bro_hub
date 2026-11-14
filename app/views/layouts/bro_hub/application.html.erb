@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= bro_hub_page_title %></title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Archivo:wdth,wght@75..125,400..800&amp;display=swap" rel="stylesheet">
+  <%= bro_hub_style_tag %>
+  <%= yield :head %>
+</head>
+<body class="bh">
+  <div class="bh-shell">
+    <div class="bh-top">
+      <span class="bh-brand">
+        <img src="<%= BroHub.skull_data_uri %>" alt="" width="26" height="26">
+        <span>powered by <%= link_to BroHub.config.brand_name, BroHub.config.brand_url, target: "_blank", rel: "noopener" %></span>
+      </span>
+      <% if bro_hub_user_label.present? %><span class="bh-user"><%= bro_hub_user_label %></span><% end %>
+    </div>
+
+    <div class="bh-body">
+      <% sections = bro_hub_sections %>
+      <% if sections.any? %>
+        <nav class="bh-side" aria-label="Bro sections">
+          <% sections.each do |section, base, current| %>
+            <div class="bh-group" style="--accent: <%= section.accent %>">
+              <span class="bh-group-label"><%= section.label %></span>
+              <% section.visible_items(bro_hub_user).each do |item| %>
+                <% badge = item.badge_value %>
+                <%= link_to bro_hub_link_path(base, item), class: [ "bh-nav", ("is-active" if bro_hub_item_active?(current, base, item)) ] do %>
+                  <span><%= item.label %></span>
+                  <% if badge %><span class="bh-badge"><%= badge %></span><% end %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </nav>
+      <% end %>
+
+      <main class="bh-main">
+        <div class="bh-crumb">
+          <span>
+            <%= bro_hub_current_section&.name || "Bro Hub" %><% if content_for?(:bro_hub_crumb) %> / <%= yield :bro_hub_crumb %><% end %>
+          </span>
+          <% if content_for?(:bro_hub_crumb_actions) %><span class="bh-crumb-actions"><%= yield :bro_hub_crumb_actions %></span><% end %>
+        </div>
+        <% if notice %><div class="bh-alert bh-alert-ok"><%= notice %></div><% end %>
+        <% if alert %><div class="bh-alert bh-alert-error"><%= alert %></div><% end %>
+        <%= yield %>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

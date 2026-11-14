@@ -1,0 +1,3 @@
+<% bro_hub_crumb @page.humanize %>
+<%= bro_hub_hero eyebrow: "Beta · fake gem", title: @page.humanize, subtitle: "page", tone: :violet, subtitle_tone: (@page == "tone" ? :green : nil),
+      lead: "Rendered by the fake Beta engine at #{request.path}.", stats: [ [ 2, "things", :amber ], [ 1, "other", :red ] ] %>

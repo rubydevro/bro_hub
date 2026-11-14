@@ -1,0 +1,21 @@
+<header class="bh-hero">
+  <div class="bh-hero-main">
+    <% if eyebrow %><div class="bh-eyebrow"><%= eyebrow %></div><% end %>
+    <h1 class="bh-title">
+      <span<%= %( class="bh-tone-#{tone}").html_safe if tone %>><%= title %></span>
+      <% if subtitle %><span class="bh-title-sub<%= " bh-tone-#{subtitle_tone}" if subtitle_tone %>"><%= subtitle %></span><% end %>
+    </h1>
+    <% if lead %><p class="bh-lead"><%= lead %></p><% end %>
+    <%= extra %>
+  </div>
+  <% if stats.any? %>
+    <div class="bh-stats">
+      <% stats.each do |value, label, stat_tone| %>
+        <div class="bh-stat">
+          <div class="bh-stat-value<%= " bh-tone-#{stat_tone}" if stat_tone %>"><%= value %></div>
+          <div class="bh-stat-label"><%= label %></div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</header>
