@@ -63,6 +63,20 @@ class BroHub::Generators::InstallGeneratorTest < Rails::Generators::TestCase
     assert_equal 1, out.scan("config/alpha_installed.txt").size
   end
 
+  test "never overwrites an existing initializer" do
+    FileUtils.mkdir_p File.join(destination_root, "config/initializers")
+    File.write(File.join(destination_root, "config/initializers/bro_hub.rb"), "# mine\n")
+    run_install "--force"
+    assert_file "config/initializers/bro_hub.rb", /\A# mine\n\z/
+  end
+
+  test "keeps the indentation of a commented-out mount" do
+    File.write(File.join(destination_root, "config/routes.rb"),
+      "Rails.application.routes.draw do\n  mount Alpha::Engine => \"/old\"\nend\n")
+    run_install "--remove-direct-mounts"
+    assert_file "config/routes.rb", /^  # BroHub mounts this now: mount Alpha::Engine/
+  end
+
   test "comments out old direct mounts when asked" do
     File.write(File.join(destination_root, "config/routes.rb"),
       "Rails.application.routes.draw do\n  mount Alpha::Engine => \"/old\"\n  mount Beta::Engine => \"/old-beta\"\nend\n")

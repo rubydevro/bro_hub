@@ -19,8 +19,25 @@ module BroHub
       class_option :remove_direct_mounts, type: :boolean, default: nil,
         desc: "Comment out old `mount SafeBro::Engine`-style lines (asked interactively when omitted)"
 
+      # Bro gems that only work with BroHub from these versions on.
+      MINIMUM_VERSIONS = { "env_bro" => "0.2.0", "safe_bro" => "0.1.0" }.freeze
+
+      def check_gem_versions
+        MINIMUM_VERSIONS.each do |name, minimum|
+          installed = Gem.loaded_specs[name]&.version
+          next if installed.nil? || installed >= Gem::Version.new(minimum)
+
+          say_status :warning, "#{name} #{installed} is too old for BroHub (needs #{minimum}+), so it is not installed " \
+            "and its old mount is left alone. Run `bundle update #{name}` and install again.", :red
+        end
+      end
+
       def copy_initializer
-        copy_file "bro_hub.rb", "config/initializers/bro_hub.rb"
+        if File.exist?(File.join(destination_root, "config/initializers/bro_hub.rb"))
+          say_status :skip, "config/initializers/bro_hub.rb already exists, leaving it alone", :yellow
+        else
+          copy_file "bro_hub.rb", "config/initializers/bro_hub.rb"
+        end
       end
 
       def mount_engine
@@ -35,7 +52,8 @@ module BroHub
       def retire_direct_mounts
         direct_mounts.each do |line|
           if remove_direct_mount?(line)
-            gsub_file "config/routes.rb", line, "# BroHub mounts this now: #{line.strip}"
+            indent = line[/\A\s*/]
+            gsub_file "config/routes.rb", line, "#{indent}# BroHub mounts this now: #{line.strip}"
           else
             say_status :warning, "#{line.strip} is still mounted directly; BroHub also serves it under #{mount_path}. " \
               "Re-run with --remove-direct-mounts or delete the line.", :yellow
@@ -48,7 +66,7 @@ module BroHub
 
         bro_gem_installers.each do |section, namespace|
           say_status :install, "#{section.name} (#{namespace})", :green
-          invoke namespace, [], skip_bro_hub: true, mount_path: mount_path
+          invoke namespace, [], { skip_bro_hub: true, mount_path: mount_path }.merge(conflict_options)
         end
       end
 
@@ -62,6 +80,11 @@ module BroHub
       end
 
       private
+        # Pass --skip/--force/--pretend/--quiet on to the installers of the other gems.
+        def conflict_options
+          options.slice(:force, :skip, :pretend, :quiet).to_h.symbolize_keys.select { |_, value| value }
+        end
+
         def routes_source
           path = File.join(destination_root, "config/routes.rb")
           File.exist?(path) ? File.read(path) : ""

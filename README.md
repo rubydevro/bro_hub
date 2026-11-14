@@ -17,6 +17,9 @@ Rails 7.1+, Ruby 3.2+. No database, no JavaScript, no asset pipeline.
 gem "bro_hub"
 ```
 
+Minimum versions: **env_bro 0.2.0** and **safe_bro 0.1.0**. Older EnvBro (0.1.x) has no BroHub support: the installer skips
+it with a warning and leaves its old mount alone, so `bundle update env_bro` first.
+
 ```sh
 bin/rails generate bro_hub:install
 ```
@@ -32,8 +35,15 @@ This sets up the whole dashboard in one go:
    (`--remove-direct-mounts` says yes without asking; without a terminal the lines are left alone with a warning),
 4. runs the installer of every Bro gem in your Gemfile (SafeBro's initializer and migrations, EnvBro's, ...).
 
+Existing config is never overwritten: if `config/initializers/bro_hub.rb` (or `env_bro.rb` / `safe_bro.rb`) is there already,
+it is skipped, and `--skip` / `--force` / `--pretend` are passed on to every gem's installer. In scripts and agents, pass
+`--skip` and `--mount-path=...` so nothing waits on a prompt.
+
 You can also run a gem's own installer on its own: `bin/rails generate safe_bro:install` sets up BroHub first, then SafeBro.
 Running both, in any order, mounts BroHub once.
+
+Who is signed in: the default calls `current_user` on your controller, and falls back to `Current.user` (the Rails 8
+authentication generator has only that). The top-right label tries `email`, `email_address` (Rails 8) then `name`.
 
 ```ruby
 # config/initializers/bro_hub.rb

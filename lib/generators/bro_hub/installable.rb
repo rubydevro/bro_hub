@@ -29,7 +29,7 @@ module BroHub
         def install_bro_hub
           return if options[:skip_bro_hub]
 
-          forward = { install_gems: false }
+          forward = { install_gems: false }.merge(bro_hub_conflict_options)
           forward[:mount_path] = options[:mount_path] if options[:mount_path].present?
           forward[:remove_direct_mounts] = options[:remove_direct_mounts] unless options[:remove_direct_mounts].nil?
           invoke "bro_hub:install", [], forward
@@ -37,6 +37,21 @@ module BroHub
       end
 
       private
+        # --skip / --force / --pretend / --quiet must reach the generators we invoke, or a nested
+        # installer would fall back to asking about conflicts (and with no terminal, overwrite).
+        def bro_hub_conflict_options
+          options.slice(:force, :skip, :pretend, :quiet).to_h.symbolize_keys.select { |_, value| value }
+        end
+
+        # Copies a config file once. An existing file is yours: it is never replaced, even with --force.
+        def copy_config_once(source, destination)
+          if File.exist?(File.join(destination_root, destination))
+            say_status :skip, "#{destination} already exists, leaving it alone", :yellow
+          else
+            copy_file source, destination
+          end
+        end
+
         # Where BroHub ended up, read back from the routes (it may have been mounted before).
         def bro_hub_path
           routes = File.join(destination_root, "config/routes.rb")
