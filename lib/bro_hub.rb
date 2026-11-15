@@ -3,6 +3,7 @@ require "bro_hub/configuration"
 require "bro_hub/section"
 require "bro_hub/registry"
 require "bro_hub/layout"
+require "bro_hub/controller_base"
 require "bro_hub/root_middleware"
 require "bro_hub/engine"
 

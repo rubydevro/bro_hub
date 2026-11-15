@@ -85,12 +85,12 @@ BroHub.register :safe_bro,
 
 ```ruby
 class SafeBro::ApplicationController < ::ApplicationController
-  include BroHub::Layout
+  include BroHub::ControllerBase
   bro_hub_section :safe_bro
 end
 ```
 
-`BroHub::Layout` sets the layout and adds `bro_hub_user`. Override it if your gem has its own idea of who is signed in.
+`BroHub::ControllerBase` includes `BroHub::Layout` (the layout, and `bro_hub_user`), turns on CSRF protection and opts out of the host app's Pundit `verify_authorized` checks, so every Bro controller behaves the same under any host `ApplicationController`. Override it if your gem has its own idea of who is signed in.
 
 **3. Give your gem an installer** that sets up BroHub first, then itself. Name it `<section key>:install` so
 `bro_hub:install` finds it:

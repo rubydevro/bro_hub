@@ -1,8 +1,6 @@
 module BroHub
   class ApplicationController < BroHub.config.parent_controller.constantize
-    include BroHub::Layout
-
-    protect_from_forgery with: :exception
+    include BroHub::ControllerBase
 
     before_action :bro_hub_require_ssl
     before_action :bro_hub_no_store
