@@ -1,6 +1,6 @@
 # BroHub
 
-One dashboard shell for the Bro gems ([EnvBro](https://github.com/rubydevro/env_bro), [SafeBro](https://github.com/rubydevro/safe_bro), and whatever comes next).
+One dashboard shell for the Bro gems ([EnvBro](https://github.com/rubydevro/env_bro), [SafeBro](https://github.com/rubydevro/safe_bro), [CacheBro](https://github.com/rubydevro/cache_bro), and whatever comes next).
 
 - **One mount point.** `/bro_hub/safe_bro`, `/bro_hub/env_bro`, ... BroHub mounts the gems' engines itself.
 - **One look.** Top bar, sidebar, breadcrumb bar and page styles are shared, so every gem feels the same.
@@ -55,6 +55,72 @@ end
 ```
 
 Opening `/bro_hub` sends people to the first section they may use.
+
+## The Bro gems
+
+Each gem is a mountable Rails engine that registers itself with BroHub. Add the gems you want to your Gemfile and run
+`bin/rails generate bro_hub:install`: BroHub finds every registered gem that ships an installer and runs it.
+
+| Gem | Section | What it does |
+| --- | --- | --- |
+| [EnvBro](https://github.com/rubydevro/env_bro) | `/bro_hub/env_bro` | Credentials and environment values, with its own approval flow. |
+| [SafeBro](https://github.com/rubydevro/safe_bro) | `/bro_hub/safe_bro` | Audits production console sessions: sessions, flagged commands, rules. |
+| [CacheBro](https://github.com/rubydevro/cache_bro) | `/bro_hub/cache_bro` | Browse, inspect and purge the Rails Redis cache, with every action audited. |
+
+### How it fits together
+
+1. A gem calls `BroHub.register` in its engine, before routes are drawn. That adds its section to the sidebar and tells BroHub which engine to mount.
+2. BroHub mounts each registered engine under its own path (`<mount>/<key>`). You mount only `BroHub::Engine`.
+3. Gem controllers include `BroHub::ControllerBase` and name their section, so pages render inside the shared shell.
+4. Who is signed in comes from BroHub's `current_user` setting. Each gem keeps its own permissions, and a sidebar section only shows for people the gem allows.
+5. BroHub has no database. Gems that keep records (SafeBro, CacheBro) store them in your app's database through their own migrations.
+
+### CacheBro
+
+```ruby
+gem "bro_hub"
+gem "cache_bro"
+```
+
+```sh
+bin/rails generate bro_hub:install     # or: bin/rails generate cache_bro:install
+bin/rails db:migrate                    # creates the audit table
+```
+
+CacheBro works on a Redis cache store (`config.cache_store = :redis_cache_store`) and needs bro_hub 0.1.2 or newer. Give the store a `namespace:`: keys are shown without it, and Flush only works when there is one.
+
+| Page | What you can do |
+| --- | --- |
+| Keys | Search by text or with `*` and `?`, see expiry and size, reveal a value, delete a key. |
+| Purge | Delete every key matching a pattern, after a preview with the match count and a sample. |
+| Flush | Delete every key in the store's namespace (type the store name to confirm). |
+| Audit log | Every reveal, delete, purge and flush, with who, when, what and why. Filter and open any entry. |
+
+Permissions are plain lambdas, all `false` until you set them (no Pundit needed):
+
+```ruby
+# config/initializers/cache_bro.rb
+CacheBro.configure do |config|
+  config.can_view_keys   = ->(user) { user.developer? }
+  config.can_view_values = ->(user) { user.lead? }       # values can hold personal data
+  config.can_delete      = ->(user) { user.lead? }
+  config.can_purge       = ->(user) { user.lead? }
+  config.can_flush       = ->(user) { user.admin? }
+  config.can_audit       = ->(user) { user.auditor? }
+end
+```
+
+A higher permission includes the lower ones: flush includes purge, purge includes delete, and any of them includes viewing keys. Viewing values and auditing stand alone.
+
+How it stays safe:
+
+- Keys are found with Redis `SCAN` (never `KEYS`), a page at a time.
+- Everything is limited to the store's namespace, so a purge or flush cannot touch other keys in the same Redis.
+- Revealing a value is a POST and is written to the audit log before the value is shown. If the audit write fails, nothing is revealed.
+- Purge and flush ask for a reason by default, and a purge stops at 100,000 keys. A purge that fails partway is still logged, with the count so far.
+- The audit log is append-only and records keys and patterns, never values.
+
+See the [CacheBro README](https://github.com/rubydevro/cache_bro) for every setting.
 
 ## For gem authors: plugging in
 
