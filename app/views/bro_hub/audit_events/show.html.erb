@@ -1,0 +1,54 @@
+<% bro_hub_crumb "Audit log", "##{@event.id}" %>
+<% content_for :bro_hub_crumb_actions do %>
+  <%= bro_hub_crumb_link "← Audit log", audit_path %>
+<% end %>
+
+<%= bro_hub_hero eyebrow: "#{@event.source_name} · #{@event.environment}", title: @event.event.humanize,
+      subtitle: (pluralize(@event.count, "item") if @event.count),
+      lead: safe_join([ content_tag(:strong, @event.user_label), " at #{@event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC")}" ]) %>
+
+<div class="bh-split">
+  <section class="bh-split-main">
+    <% if @event.target.present? %>
+      <div class="bh-block-head"><h2 class="bh-h2">Target</h2></div>
+      <pre class="bh-cmd-code" style="white-space:pre-wrap;overflow-wrap:anywhere"><%= @event.target %></pre>
+    <% end %>
+
+    <% if @event.sample.any? %>
+      <div class="bh-block-head" style="margin-top:24px">
+        <h2 class="bh-h2">Sample</h2>
+        <span class="bh-meta">a sample of <%= @event.sample.size %><%= " (more were touched)" if @event.count.to_i > @event.sample.size %></span>
+      </div>
+      <div class="bh-log">
+        <% @event.sample.each do |item| %>
+          <div class="bh-cmd"><pre class="bh-cmd-code" style="white-space:pre-wrap;overflow-wrap:anywhere"><%= item %></pre></div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% extra = @event.details.except("sample", "truncated") %>
+    <% if extra.any? %>
+      <div class="bh-block-head" style="margin-top:24px"><h2 class="bh-h2">Details</h2></div>
+      <pre class="bh-cmd-code" style="white-space:pre-wrap;overflow-wrap:anywhere"><%= JSON.pretty_generate(extra) %></pre>
+    <% end %>
+  </section>
+
+  <div class="bh-split-aside">
+    <section class="bh-block">
+      <h2 class="bh-h2">Entry</h2>
+      <dl class="bh-dl">
+        <dt>User</dt><dd><%= @event.user_label %></dd>
+        <dt>Gem</dt><dd><%= @event.source_name %></dd>
+        <dt>Event</dt><dd><span class="bh-tag"><%= @event.event.humanize %></span></dd>
+        <dt>When</dt><dd><%= bro_hub_time(@event.created_at) %></dd>
+        <dt>Environment</dt><dd><%= @event.environment %></dd>
+        <% if @event.context.present? %><dt>Context</dt><dd><%= @event.context %></dd><% end %>
+        <% if @event.ip.present? %><dt>IP</dt><dd><%= @event.ip %></dd><% end %>
+        <dt>Count</dt><dd><%= @event.count || "-" %></dd>
+        <dt>Reason</dt><dd><%= @event.reason.presence || "none given" %></dd>
+        <% if @event.details["completed"] == false %><dt>Outcome</dt><dd class="bh-tone-red">failed part way</dd><% end %>
+        <% if @event.truncated? %><dt>Limit</dt><dd class="bh-tone-amber">stopped at a limit</dd><% end %>
+      </dl>
+    </section>
+  </div>
+</div>

@@ -6,6 +6,7 @@ class BroHub::Generators::InstallGeneratorTest < Rails::Generators::TestCase
   destination File.expand_path("../../tmp/generator_test", __dir__)
 
   setup do
+    BroHub::Testing.record_rails_commands.clear
     prepare_destination
     FileUtils.mkdir_p File.join(destination_root, "config")
     File.write(File.join(destination_root, "config/routes.rb"), "Rails.application.routes.draw do\nend\n")
@@ -14,6 +15,11 @@ class BroHub::Generators::InstallGeneratorTest < Rails::Generators::TestCase
   test "creates the initializer" do
     run_install
     assert_file "config/initializers/bro_hub.rb", /BroHub\.configure/
+  end
+
+  test "copies the audit table migration, once, however many gems are installed" do
+    run_install
+    assert_equal [ "bro_hub:install:migrations" ], BroHub::Testing::RAILS_COMMANDS
   end
 
   test "mounts at the default path when not interactive" do

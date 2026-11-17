@@ -24,7 +24,8 @@
 
     <div class="bh-body">
       <% sections = bro_hub_sections %>
-      <% if sections.any? %>
+      <% own_items = bro_hub_own_items %>
+      <% if sections.any? || own_items.any? %>
         <nav class="bh-side" aria-label="Bro sections">
           <% sections.each do |section, base, current| %>
             <div class="bh-group" style="--accent: <%= section.accent %>">
@@ -35,6 +36,14 @@
                   <span><%= item.label %></span>
                   <% if badge %><span class="bh-badge"><%= badge %></span><% end %>
                 <% end %>
+              <% end %>
+            </div>
+          <% end %>
+          <% if own_items.any? %>
+            <div class="bh-group" style="--accent: <%= BroHub::Section::ACCENTS[:violet] %>">
+              <span class="bh-group-label">Bro Hub</span>
+              <% own_items.each do |label, path, active| %>
+                <%= link_to path, class: [ "bh-nav", ("is-active" if active) ] do %><span><%= label %></span><% end %>
               <% end %>
             </div>
           <% end %>

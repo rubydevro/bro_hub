@@ -74,6 +74,30 @@ module BroHub
         stats: stats, extra: (capture(&block) if block)
     end
 
+    # "2026-11-16 09:30", in UTC, with the exact time on hover.
+    def bro_hub_time(time)
+      return "-" unless time
+
+      content_tag(:time, time.utc.strftime("%Y-%m-%d %H:%M"), datetime: time.iso8601, title: time.utc.to_s)
+    end
+
+    # What the sidebar's own "Bro Hub" group links to: [ label, path, active? ] for this person, or none.
+    def bro_hub_own_items
+      return [] unless bro_hub_root && bro_hub_user && BroHub.registry.audited_by(bro_hub_user).any?
+
+      [ [ "Audit log", "#{bro_hub_root}/audit", request.path.start_with?("#{bro_hub_root}/audit") && controller.try(:bro_hub_section_key).nil? ] ]
+    end
+
+    # "← Newer / Older →" for any list paged by a `page` param, counted from 0.
+    def bro_hub_pager(total:, page:, per_page:, noun: "event")
+      newer = link_to("← Newer", url_for(request.query_parameters.merge(page: page - 1))) if page > 0
+      older = link_to("Older →", url_for(request.query_parameters.merge(page: page + 1))) if (page + 1) * per_page < total
+      content_tag(:div, class: "bh-meta", style: "display:flex;justify-content:space-between;gap:16px;margin-top:14px") do
+        safe_join([ content_tag(:span, "#{number_with_delimiter(total)} #{total == 1 ? noun : noun.pluralize}"),
+                    content_tag(:span, safe_join([ newer, older ].compact, " ")) ])
+      end
+    end
+
     # Inline <style> that works under a nonce-based Content Security Policy.
     def bro_hub_style_tag
       tag.style(BroHub.styles.html_safe, nonce: (content_security_policy_nonce if respond_to?(:content_security_policy_nonce)))

@@ -1,5 +1,6 @@
 BroHub.register :alpha, label: "Alpha · audit", accent: :red, engine: "Alpha::Engine", order: 10,
   visible_to: ->(user) { user.can?(:audit) },
+  audit_visible_to: ->(user) { user.can?(:audit) },
   items: [
     { label: "Sessions", path: "/", badge: -> { 3 } },
     { label: "Flagged commands", path: "/flagged" },
@@ -9,6 +10,7 @@ BroHub.register :alpha, label: "Alpha · audit", accent: :red, engine: "Alpha::E
   ]
 
 BroHub.register :beta, label: "Beta · config", accent: :green, engine: "Beta::Engine", order: 20,
+  audit_visible_to: ->(user) { user.role == "staff" },
   items: [
     { label: "Environments", path: "/" },
     { label: "Propose a change", path: "/proposal/new" },

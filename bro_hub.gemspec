@@ -5,10 +5,11 @@ Gem::Specification.new do |spec|
   spec.version     = BroHub::VERSION
   spec.authors     = [ "Ruby Dev SRL" ]
   spec.email       = [ "office@rubydev.ro" ]
-  spec.summary     = "One dashboard shell for the Bro gems (EnvBro, SafeBro, ...)."
+  spec.summary     = "One dashboard shell and one audit log for the Bro gems (EnvBro, SafeBro, CacheBro, ...)."
   spec.description = "BroHub is the shared admin shell: one mount point, one layout, one sidebar and one place to " \
                      "configure who is signed in. Each Bro gem registers its pages and shows up as a section. " \
-                     "Sections only appear for people who may use them."
+                     "Sections only appear for people who may use them. It also keeps the one audit table every Bro gem writes to, " \
+                     "with a combined audit log."
   spec.homepage    = "https://www.rubydev.ro"
   spec.license     = "MIT"
 
@@ -19,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.metadata["bug_tracker_uri"] = "https://github.com/rubydevro/bro_hub/issues"
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
-    Dir["{app,config,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+    Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
   spec.required_ruby_version = ">= 3.2"

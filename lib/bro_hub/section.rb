@@ -48,14 +48,18 @@ module BroHub
     #               visible_to: ->(user) { true } } ]
     # visible_to: ->(user) { true } decides whether this person sees the section. Navigation only, not security:
     #             every engine still authorizes its own pages.
+    # audit_visible_to: ->(user) { true } decides who may see this gem's rows in the hub's audit log. Leave it out
+    #             when the gem keeps no audit trail: nothing of it shows there. Like everything else here it is a
+    #             filter on what is listed, so the gem should check the same thing on its own audit pages.
     # order:      lower comes first.
-    def initialize(key, label:, items:, name: nil, accent: :violet, engine: nil, visible_to: nil, order: 100)
+    def initialize(key, label:, items:, name: nil, accent: :violet, engine: nil, visible_to: nil, audit_visible_to: nil, order: 100)
       @key = key.to_sym
       @label = label.to_s
       @name = (name || @label.split("·").first).to_s.strip
       @accent = resolve_accent(accent)
       @engine = engine
       @visible_to = visible_to
+      @audit_visible_to = audit_visible_to
       @order = order
       @items = Array(items).map { |item| Item.new(**item.symbolize_keys.slice(:label, :path, :badge, :match, :visible_to)) }
       raise ArgumentError, "BroHub section #{key} needs at least one item" if @items.empty?
@@ -69,6 +73,12 @@ module BroHub
       return false unless user
 
       @visible_to ? !!@visible_to.call(user) : true
+    end
+
+    def audited_by?(user)
+      return false unless user && @audit_visible_to
+
+      !!@audit_visible_to.call(user)
     end
 
     def visible_items(user)

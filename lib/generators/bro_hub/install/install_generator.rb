@@ -40,6 +40,11 @@ module BroHub
         end
       end
 
+      # The one audit table every Bro gem writes to. Copied once: running the installer again skips it.
+      def copy_migrations
+        rails_command "bro_hub:install:migrations", inline: true
+      end
+
       def mount_engine
         if routes_source.include?("BroHub::Engine")
           say_status :skip, "BroHub::Engine is already mounted", :yellow
@@ -74,8 +79,9 @@ module BroHub
         say <<~TEXT
 
           BroHub is installed. Next:
-            1. Check config/initializers/bro_hub.rb (how to find the signed-in user)
-            2. Visit #{mount_path}. Each Bro gem lives under #{mount_path}/<gem>
+            1. bin/rails db:migrate (creates the audit table all the Bro gems share)
+            2. Check config/initializers/bro_hub.rb (how to find the signed-in user)
+            3. Visit #{mount_path}. Each Bro gem lives under #{mount_path}/<gem>, the combined audit log under #{mount_path}/audit
         TEXT
       end
 

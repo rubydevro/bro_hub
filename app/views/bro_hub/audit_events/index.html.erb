@@ -1,0 +1,38 @@
+<% bro_hub_crumb "Audit log" %>
+<% content_for :bro_hub_crumb_actions do %>
+  <%= bro_hub_crumb_link "All", audit_path(@filter.except(:source)), active: @filter[:source].blank? %>
+  <% sections.each do |section| %>
+    <%= bro_hub_crumb_link section.name, audit_path(@filter.merge(source: section.key)), active: @filter[:source] == section.key.to_s %>
+  <% end %>
+<% end %>
+
+<%= bro_hub_hero eyebrow: "Audit log", title: number_with_delimiter(@total), subtitle: @total == 1 ? "event" : "events",
+      lead: "Who did what in every Bro gem you may audit. Entries can't be changed, and they hold names and patterns, never secret values.",
+      stats: sections.map { |section| [ @counts.fetch(section.key.to_s, 0), section.name.downcase, nil ] } %>
+
+<%= form_with url: audit_path, method: :get, class: "bh-filters" do %>
+  <%= hidden_field_tag :source, @filter[:source] if @filter[:source] %>
+  <%= text_field_tag :q, @filter[:q], placeholder: "Search targets and reasons", class: "bh-input is-strong", "aria-label": "Search targets and reasons" %>
+  <%= text_field_tag :user, @filter[:user], placeholder: "User", class: "bh-input", "aria-label": "User" %>
+  <%= select_tag :event, options_for_select([ [ "Any event", "" ], *@event_names.map { |name| [ name.humanize, name ] } ], @filter[:event]), class: "bh-select", "aria-label": "Event" %>
+  <%= submit_tag "Filter", name: nil, class: "bh-chip" %>
+  <%= link_to "Reset", audit_path(source: @filter[:source]), class: "bh-link-quiet" %>
+<% end %>
+
+<div class="bh-table-wrap">
+  <div class="bh-table" style="--cols: 150px 150px 110px 150px minmax(220px,1fr) 70px; --min: 900px">
+    <div class="bh-row is-head"><span>When</span><span>User</span><span>Gem</span><span>Event</span><span>Target</span><span>Count</span></div>
+    <% @events.each do |event| %>
+      <%= link_to audit_event_path(event), class: "bh-row" do %>
+        <span class="bh-tone-violet"><%= bro_hub_time(event.created_at) %></span>
+        <span class="bh-cell-strong"><%= event.user_label %></span>
+        <span class="bh-cell-muted"><%= event.source_name %></span>
+        <span><span class="bh-tag"><%= event.event.humanize %></span></span>
+        <span class="bh-cell-text" style="overflow-wrap:anywhere"><%= truncate(event.target.to_s, length: 90) %></span>
+        <span><%= event.count %></span>
+      <% end %>
+    <% end %>
+    <% if @events.empty? %><div class="bh-empty">Nothing recorded.</div><% end %>
+    <%= bro_hub_pager(total: @total, page: @page, per_page: BroHub::AuditEventsController::PER_PAGE) %>
+  </div>
+</div>

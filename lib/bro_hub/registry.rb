@@ -22,6 +22,11 @@ module BroHub
       select { |section| section.visible_to?(user) }
     end
 
+    # The sections whose audit rows this person may see in the hub's audit log.
+    def audited_by(user)
+      select { |section| section.audited_by?(user) }
+    end
+
     def clear
       @sections.clear
     end

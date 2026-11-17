@@ -5,6 +5,7 @@ require "bro_hub/registry"
 require "bro_hub/layout"
 require "bro_hub/controller_base"
 require "bro_hub/root_middleware"
+require "bro_hub/audit"
 require "bro_hub/engine"
 
 # The shared admin shell for the Bro gems.

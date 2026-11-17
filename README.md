@@ -6,10 +6,11 @@ One dashboard shell for the Bro gems ([EnvBro](https://github.com/rubydevro/env_
 - **One look.** Top bar, sidebar, breadcrumb bar and page styles are shared, so every gem feels the same.
 - **One sidebar.** Each gem registers its pages and shows up as a section. A section only appears for people allowed to use it.
 - **One place for "who is signed in".** Set it once for all gems.
+- **One audit log.** Every Bro gem writes its audit trail to one table, and BroHub shows them together.
 
 It is a shell, not a security boundary: hiding a section is navigation. Every Bro gem still authorizes its own pages.
 
-Rails 7.1+, Ruby 3.2+. No database, no JavaScript, no asset pipeline.
+Rails 7.1+, Ruby 3.2+. One table (the audit log), no JavaScript, no asset pipeline.
 
 ## Install
 
@@ -26,7 +27,7 @@ bin/rails generate bro_hub:install
 
 This sets up the whole dashboard in one go:
 
-1. adds `config/initializers/bro_hub.rb`,
+1. adds `config/initializers/bro_hub.rb` and copies the audit table migration (run `bin/rails db:migrate` afterwards),
 2. mounts BroHub (it asks where, default `/bro_hub`; or `--mount-path=/ops/bro`):
    ```ruby
    mount BroHub::Engine => "/bro_hub"
@@ -73,7 +74,7 @@ Each gem is a mountable Rails engine that registers itself with BroHub. Add the 
 2. BroHub mounts each registered engine under its own path (`<mount>/<key>`). You mount only `BroHub::Engine`.
 3. Gem controllers include `BroHub::ControllerBase` and name their section, so pages render inside the shared shell.
 4. Who is signed in comes from BroHub's `current_user` setting. Each gem keeps its own permissions, and a sidebar section only shows for people the gem allows.
-5. BroHub has no database. Gems that keep records (SafeBro, CacheBro) store them in your app's database through their own migrations.
+5. BroHub keeps one table, the shared audit log, in your app's database (its migration is copied by the installer). SafeBro also keeps its session tables.
 
 ### CacheBro
 
@@ -122,6 +123,25 @@ How it stays safe:
 
 See the [CacheBro README](https://github.com/rubydevro/cache_bro) for every setting.
 
+## The audit log
+
+Every Bro gem that keeps an audit trail writes it to one table, `bro_hub_audit_events`, through `BroHub::Audit.record`.
+BroHub shows them together under `<mount>/audit`: filter by gem, event, user or text, and open any entry. Each person
+sees the rows of the gems they may audit, and nothing else. Entries are append-only and hold names and patterns, never
+secret values. Gems without an audit trail (DeadBroHub) simply don't appear.
+
+| Column | Meaning |
+| --- | --- |
+| `source` | the gem (`env_bro`, `safe_bro`, `cache_bro`) |
+| `event`, `user_label`, `environment`, `created_at` | what happened, who did it, where, when |
+| `context` | where it happened inside the gem: a cache store name, a console host |
+| `target`, `count`, `reason`, `ip` | what it happened to, how many, why, from where |
+| `reference`, `digest`, `parent_id` | links for gems that tie rows together (EnvBro: a proposal's token, its file's digest, its deployment) |
+| `details` | anything else, as JSON |
+
+Upgrading from 0.1: run `bin/rails g bro_hub:install` and `bin/rails db:migrate` to create the table. The gems that
+use it (env_bro 0.3, safe_bro 0.3, cache_bro 0.2) need bro_hub 0.2.
+
 ## For gem authors: plugging in
 
 **1. Register your section** (in your engine file, so it runs before routes are drawn):
@@ -134,6 +154,7 @@ BroHub.register :safe_bro,
   engine: "SafeBro::Engine",             # BroHub mounts it at /<key>
   order: 10,                             # lower comes first
   visible_to: ->(user) { SafeBro.config.can_audit.call(user) },
+  audit_visible_to: ->(user) { SafeBro.config.can_audit.call(user) },   # who sees your rows in the hub's audit log (leave out: none)
   items: [
     { label: "Sessions", path: "/", badge: -> { SafeBro::Session.pending.count } },
     { label: "Flagged commands", path: "/flagged" },
@@ -158,7 +179,27 @@ end
 
 `BroHub::ControllerBase` includes `BroHub::Layout` (the layout, and `bro_hub_user`), turns on CSRF protection and opts out of the host app's Pundit `verify_authorized` checks, so every Bro controller behaves the same under any host `ApplicationController`. Override it if your gem has its own idea of who is signed in.
 
-**3. Give your gem an installer** that sets up BroHub first, then itself. Name it `<section key>:install` so
+**3. Write your audit trail to the shared table** (no migration of your own):
+
+```ruby
+BroHub::Audit.record(source: :cache_bro, event: :keys_purged, user: "jane@example.com",
+  context: "Rails.cache", target: "posts/*", count: 12, reason: "stale", sample: [ "posts/1" ])
+```
+
+It fails closed: when the row can't be written the error is raised, so an action that must not go unaudited stops.
+To read your own rows, subclass the model with a default scope:
+
+```ruby
+class CacheBro::AuditEvent < BroHub::AuditEvent
+  default_scope { where(source: "cache_bro") }
+  validates :event, inclusion: { in: %w[ keys_purged ] }
+end
+```
+
+In your tests: `require "bro_hub/testing"; BroHub::Testing.load_schema` creates the table, and
+`BroHub::Testing.record_rails_commands` stubs BroHub's installer in generator tests.
+
+**4. Give your gem an installer** that sets up BroHub first, then itself. Name it `<section key>:install` so
 `bro_hub:install` finds it:
 
 ```ruby
@@ -175,7 +216,7 @@ class SafeBro::Generators::InstallGenerator < Rails::Generators::Base
 end
 ```
 
-**4. Fill in the page:**
+**5. Fill in the page:**
 
 ```erb
 <% bro_hub_crumb "Console sessions", "#5" %>                         <%# "SafeBro / Console sessions / #5" %>
